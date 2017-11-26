@@ -1,36 +1,61 @@
 $(document).ready(function () {
-	const outputEl = $(".product-listing")
 	
-	// you are requesting access to these files here, so you can use them as you go. 
-	$.ajax({
-		"url": "products.json",
-		"method": "GET"
-		// all the products.json is nested with in productData.
-	}).then(productData => {
-		let totalPrint = ""
-        
-		const productInfo = productData.products 
-
-		let saleInfo = "<section id='saleContainer'></section"
-        
-		$.ajax({
-			"url": "categories.json",
-			"method": "GET"
-		}).then (categoryData => {
-
-			const categoryInfo = categoryData.categories
-
-			productInfo.forEach(sale => {
-				// const productCategory = categoryInfo.find(current => current.id === categoryData.category_id)
-				totalPrint += `
-                <article id="product_${sale.id}>
-				<p>Name: ${sale.name}</p>
-				<p>Category: ${categoryInfo.name}</p>
-				<p>Price: ${sale.price}</p>
-                </article>
-				`  
+		const outputEl = $("#department-products")
+	
+		// Create XHR objects (not invoked yet)
+		const getCategories = $.ajax({ url: "./categories.json" })
+		const getProducts = $.ajax({ url: "./products.json" })
+	
+		// object to avoid Object.create ;)
+		let productCategoryObj = {
+			"products": null,
+			"category": null,
+			"clickedCategory": {
+				"id": 75
+			}
+		}
+	
+		getProducts.then(
+			function (theProducts) {
+				productCategoryObj.products = theProducts
+				getCategories.then(
+					function (theCategories) {
+						productCategoryObj.category = theCategories
+	
+						// event listener for select + update DOM with sale price innerHTML
+						$("select[name='discount']").change(function () {
+							let selectedText = $(this).find("option:selected").text()
+							productCategoryObj.clickedCategory = theCategories.categories.find(c => c.season_discount === selectedText)
+	
+							outputToDOM()
+						})
+						// display to DOM
+						outputToDOM()
+						// })
+					})
+			}
+		)
+	
+		// display to DOM function
+		let outputToDOM = function (output) {
+			let finalHTML = ""
+			productCategoryObj.products.products.forEach(product => {
+				const productCategory = productCategoryObj.category.categories.find(current => current.id === product.category_id)
+	
+				finalHTML += `
+					<section>
+						<p>Product: ${product.name}</p>
+						<p>Category: ${productCategory.name}</p>
+						<p>Price: $${product.price}</p>
+				`
+				// on click, determines if category and product ids match the clicked season and appends the sale price
+				if (product.category_id === productCategoryObj.clickedCategory.id) {
+					finalHTML += `<p style="color:red">Sale Price: ${(product.price - productCategory.discount).toFixed(2)}</p>`
+																
+				}
+				finalHTML += "</section><br>"
+	
+				outputEl.html(finalHTML)
 			})
-			outputEl.html(totalPrint)
-		})
+		}
 	})
-})
